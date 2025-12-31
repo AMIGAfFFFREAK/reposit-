@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>reposit.</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: black;
+    color: white;
+    font-family: "Courier New", monospace;
+    height: 100%;
+  }
+
+  .topbar {
+    padding: 6px 10px;
+    border-bottom: 1px solid white;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .topbar label {
+    cursor: pointer;
+    border: 1px solid white;
+    padding: 2px 6px;
+    font-size: 12px;
+  }
+
+  .topbar input {
+    display: none;
+  }
+
+  .screen {
+    padding: 10px;
+    white-space: pre-wrap;
+  }
+
+  .title {
+    margin-bottom: 10px;
+  }
+
+  .file {
+    cursor: pointer;
+  }
+
+  .file:hover {
+    background: white;
+    color: black;
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <label>
+    UPLOAD
+    <input type="file" multiple id="uploader">
+  </label>
+  <span>reposit.</span>
+</div>
+
+<div class="screen" id="screen">
+<span class="title">
+reposit. v0.1
+----------------
+OPEN SOURCE FILE ARCHIVE
+</span>
+
+DIR LIST:
+</div>
+
+<script>
+const uploader = document.getElementById("uploader");
+const screen = document.getElementById("screen");
+const files = [];
+
+uploader.addEventListener("change", () => {
+  for (const file of uploader.files) {
+    files.push(file);
+  }
+  render();
+});
+
+function render() {
+  screen.innerHTML = `
+<span class="title">
+reposit. v0.1
+----------------
+OPEN SOURCE FILE ARCHIVE
+</span>
+
+DIR LIST:
+`;
+
+  if (files.length === 0) {
+    screen.innerHTML += "  (empty)\n";
+    return;
+  }
+
+  files.forEach((file, i) => {
+    const line = document.createElement("div");
+    line.textContent = `  ${file.name}`;
+    line.className = "file";
+    line.onclick = () => openFile(file);
+    screen.appendChild(line);
+  });
+}
+
+function openFile(file) {
+  const reader = new FileReader();
+
+  if (file.type.startsWith("text")) {
+    reader.onload = () => {
+      screen.innerHTML = `
+${file.name}
+----------------
+${reader.result}
+
+[PRESS RELOAD TO RETURN]
+`;
+    };
+    reader.readAsText(file);
+  } else {
+    const url = URL.createObjectURL(file);
+    window.open(url);
+  }
+}
+
+rend
