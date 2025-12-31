@@ -1,105 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8">
 <title>reposit.</title>
 <style>
-  html, body {
-    margin: 0;
-    padding: 0;
-    background: black;
-    color: white;
-    font-family: "Courier New", monospace;
-    height: 100%;
-  }
-
-  .topbar {
-    padding: 6px 10px;
-    border-bottom: 1px solid white;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .topbar label {
-    cursor: pointer;
-    border: 1px solid white;
-    padding: 2px 6px;
-    font-size: 12px;
-  }
-
-  .topbar input {
-    display: none;
-  }
-
-  .screen {
-    padding: 10px;
-    white-space: pre-wrap;
-  }
-
-  .title {
-    margin-bottom: 10px;
-  }
-
-  .file {
-    cursor: pointer;
-  }
-
-  .file:hover {
-    background: white;
-    color: black;
-  }
+html, body {
+  margin:0; padding:0; height:100%; background:black; color:white;
+  font-family: monospace; font-size:12px;
+}
+.topbar {
+  padding:5px 10px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+}
+.topbar a {
+  color:white; text-decoration:underline; font-size:10px; cursor:pointer;
+}
+.screen { padding:10px; white-space:pre-wrap; }
+.file { cursor:pointer; }
+.file:hover { background:white; color:black; }
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <label>
-    UPLOAD
-    <input type="file" multiple id="uploader">
-  </label>
-  <span>reposit.</span>
+  reposit. <>
+  <a id="infoLink">info</a>
+  <input type="text" id="search" placeholder="Search distro">
+  <button id="searchBtn">SEARCH</button>
 </div>
 
-<div class="screen" id="screen">
-<span class="title">
-reposit. v0.1
-----------------
-OPEN SOURCE FILE ARCHIVE
-</span>
-
-DIR LIST:
-</div>
+<div class="screen" id="screen">DIR LIST:</div>
 
 <script>
-const uploader = document.getElementById("uploader");
 const screen = document.getElementById("screen");
-const files = [];
+const infoLink = document.getElementById("infoLink");
+const searchInput = document.getElementById("search");
+const searchBtn = document.getElementById("searchBtn");
 
-uploader.addEventListener("change", () => {
-  for (const file of uploader.files) {
-    files.push(file);
+// ========== CONFIG ==========
+// Put the GitHub repo raw URL or API URL here (public repo)
+const githubUser = "yourusername"; // GitHub username
+const githubRepo = "yourrepo"; // GitHub repo name
+const githubBranch = "main"; // branch
+
+let files = [];
+
+// Fetch file list from GitHub using API
+async function fetchFiles() {
+  try {
+    const res = await fetch(`https://api.github.com/repos/${githubUser}/${githubRepo}/contents/?ref=${githubBranch}`);
+    const data = await res.json();
+    // Only files, skip folders
+    files = data.filter(f => f.type === "file").map(f=>({
+      name: f.name,
+      download_url: f.download_url
+    }));
+    render(files);
+  } catch(err){
+    screen.innerHTML = "ERROR fetching files from GitHub: "+err;
   }
-  render();
-});
+}
 
-function render() {
-  screen.innerHTML = `
-<span class="title">
-reposit. v0.1
-----------------
-OPEN SOURCE FILE ARCHIVE
-</span>
-
-DIR LIST:
-`;
-
-  if (files.length === 0) {
+// Render files
+function render(list = files){
+  screen.innerHTML = "DIR LIST:\n";
+  if(list.length === 0){
     screen.innerHTML += "  (empty)\n";
     return;
   }
-
-  files.forEach((file, i) => {
+  list.forEach(file => {
     const line = document.createElement("div");
     line.textContent = `  ${file.name}`;
     line.className = "file";
@@ -108,24 +76,39 @@ DIR LIST:
   });
 }
 
-function openFile(file) {
-  const reader = new FileReader();
-
-  if (file.type.startsWith("text")) {
-    reader.onload = () => {
-      screen.innerHTML = `
-${file.name}
-----------------
-${reader.result}
-
-[PRESS RELOAD TO RETURN]
-`;
-    };
-    reader.readAsText(file);
-  } else {
-    const url = URL.createObjectURL(file);
-    window.open(url);
+// Open file
+async function openFile(file){
+  try {
+    const res = await fetch(file.download_url);
+    const contentType = res.headers.get("content-type");
+    if(contentType && contentType.includes("text")){
+      const text = await res.text();
+      screen.innerHTML = `${file.name}\n----------------\n${text}\n\n[PRESS RELOAD TO RETURN]`;
+    } else {
+      window.open(file.download_url);
+    }
+  } catch(err){
+    screen.innerHTML = "ERROR opening file: "+err;
   }
 }
 
-rend
+// Info
+infoLink.addEventListener("click", ()=> {
+  alert("reposit<> is an open-sourced community-fed project that is a simple, all-access place for you to get your distros without doing all the search.");
+});
+
+// Search
+searchBtn.addEventListener("click", ()=>{
+  const term = searchInput.value.toLowerCase();
+  const filtered = files.filter(f => f.name.toLowerCase().includes(term));
+  if(filtered.length === 0){
+    screen.innerHTML = `sorry, we don't have "${searchInput.value}"! ¯\\_(ツ)_/¯`;
+  } else render(filtered);
+});
+
+// Initial fetch
+fetchFiles();
+</script>
+
+</body>
+</html>
